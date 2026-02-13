@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KinesioGame · Encuesta</title>
+
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="card formCard">
+      <header class="brand">
+        <img class="logo" src="/favicon.png" alt="KinesioGame" />
+        <div class="brandText">
+          <h1>Encuesta de Apreciación Tecnológica</h1>
+          <p class="sub">KinesioGame · Plataforma interactiva de rehabilitación</p>
+        </div>
+      </header>
+
+      <div class="divider"></div>
+
+      <p class="lead">
+        Marca tu respuesta en cada ítem (1 = Muy en desacuerdo, 5 = Totalmente de acuerdo).
+        Luego responde 3 preguntas abiertas.
+      </p>
+
+      <form method="post" action="/encuesta" class="form">
+        <!-- Datos de contacto (opcional) -->
+        <div class="panel">
+          <h2>Datos generales</h2>
+
+            <div class="twoCol">
+                <div class="field">
+                    <label for="nombre">Nombre y apellido *</label>
+                    <input id="nombre" name="nombre" type="text" placeholder="Ej: Juan Pérez" required />
+                </div>
+
+                <div class="field">
+                    <label for="correo">Correo electrónico *</label>
+                    <input id="correo" name="correo" type="email" placeholder="tu@correo.cl" required />
+                </div>
+
+                <div class="field">
+                    <label for="edad">Edad *</label>
+                    <input id="edad" name="edad" type="number" min="10" max="110" placeholder="Ej: 28" required />
+                </div>
+            </div>
+            
+          </div>
+
+          <p class="hint">
+            *Si prefieres, puedes dejar estos datos en blanco.
+          </p>
+        </div>
+
+        <!-- Likert -->
+        <div class="panel">
+          <h2>I. Evaluación por ítems</h2>
+
+          <div class="likertHeader">
+            <span class="lh-left">Ítem</span>
+            <span class="lh">1</span>
+            <span class="lh">2</span>
+            <span class="lh">3</span>
+            <span class="lh">4</span>
+            <span class="lh">5</span>
+          </div>
+
+          {% for text in items %}
+          {% set q = loop.index %}
+          <div class="likertRow">
+            <div class="likertText">
+              <span class="num">({{ q }})</span> {{ text }}
+            </div>
+
+            <div class="likertRadios">
+              {% for v in [1,2,3,4,5] %}
+              <label class="radioPill">
+                <input type="radio" name="item_{{ q }}" value="{{ v }}" required>
+                <span>{{ v }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+
+          <p class="hint">
+            1 = Muy en desacuerdo · 2 = En desacuerdo · 3 = Ni de acuerdo ni en desacuerdo ·
+            4 = De acuerdo · 5 = Totalmente de acuerdo
+          </p>
+        </div>
+
+        <!-- Abiertas -->
+        <div class="panel">
+          <h2>II. Preguntas abiertas</h2>
+
+          <div class="field">
+            <label for="problemas">¿Cuáles fueron los principales problemas y/o desventajas que encontró durante el uso del sistema propuesto?</label>
+            <textarea id="problemas" name="problemas" rows="4" placeholder="Escribe tu respuesta..."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="ventajas">¿Cuáles fueron las principales ventajas del sistema propuesto?</label>
+            <textarea id="ventajas" name="ventajas" rows="4" placeholder="Escribe tu respuesta..."></textarea>
+          </div>
+
+          <div class="field">
+            <label for="otros_juegos">Desde su experiencia, ¿qué otros juegos le gustaría que existieran en la plataforma?</label>
+            <textarea id="otros_juegos" name="otros_juegos" rows="4" placeholder="Escribe tu respuesta..."></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a class="btnGhost" href="/">Volver</a>
+          <button class="btn" type="submit">Enviar encuesta</button>
+        </div>
+
+        <p class="foot small">
+          USACH · Trabajo de Titulación · Gracias por tu apoyo
+        </p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
