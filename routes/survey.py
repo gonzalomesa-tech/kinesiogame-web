@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -31,6 +32,11 @@ LIKERT_ITEMS = [
     "Considero viable su implementación en un entorno clínico real.",
     "Recomendaría esta plataforma a otros profesionales o usuarios.",
 ]
+
+
+def chile_timestamp_iso() -> str:
+    """Timestamp ISO-8601 en horario Chile (America/Santiago) con offset."""
+    return datetime.now(ZoneInfo("America/Santiago")).isoformat(timespec="seconds")
 
 
 @router.get("/encuesta", response_class=HTMLResponse)
@@ -63,7 +69,7 @@ async def survey_post(request: Request):
 
     # Armamos payload final
     payload = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": chile_timestamp_iso(),  # <-- Chile
         "datos_generales": {
             "nombre": nombre,
             "correo": correo,
@@ -112,7 +118,7 @@ async def survey_post(request: Request):
             # Importante: no caer la app si falla Sheets
             print("Sheets append failed:", repr(e))
 
-    # ===== Guardar respuestas (modo prototipo / respaldo) =====
+    # ===== Guardar respuestas (respaldo local en Railway /data) =====
     data_dir = BASE_DIR / "data"
     data_dir.mkdir(exist_ok=True)
     out_file = data_dir / "respuestas.jsonl"
@@ -126,18 +132,3 @@ async def survey_post(request: Request):
 @router.get("/gracias", response_class=HTMLResponse)
 def thanks(request: Request):
     return templates.TemplateResponse("thanks.html", {"request": request})
-
-
-# Endpoint de debug para probar escritura en Sheets (úsalo y luego lo borras si quieres)
-@router.get("/debug/sheets")
-def debug_sheets():
-    sheet_id = os.getenv("GSHEET_ID", "").strip()
-    tab = os.getenv("GSHEET_TAB", "Respuestas").strip()
-    if not sheet_id:
-        return {"ok": False, "error": "Missing GSHEET_ID"}
-
-    try:
-        append_row(sheet_id, ["TEST", "ok"], sheet_name=tab)
-        return {"ok": True, "sheet_id": sheet_id, "tab": tab}
-    except Exception as e:
-        return {"ok": False, "error": repr(e), "sheet_id": sheet_id, "tab": tab}
