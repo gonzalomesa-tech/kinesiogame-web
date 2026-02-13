@@ -1,12 +1,13 @@
 import json
 import os
-from utils.sheets import append_row
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
+from utils.sheets import append_row
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -44,13 +45,12 @@ def survey_get(request: Request):
 async def survey_post(request: Request):
     form = await request.form()
 
-    # Campos obligatorios (seguridad extra: aunque en HTML estén required)
+    # Campos obligatorios
     nombre = (form.get("nombre") or "").strip()
     correo = (form.get("correo") or "").strip()
     edad_raw = (form.get("edad") or "").strip()
 
     if not nombre or not correo or not edad_raw:
-        # Volvemos a la encuesta si falta algo (simple y efectivo)
         return RedirectResponse(url="/encuesta", status_code=303)
 
     # Validación básica de edad
@@ -76,8 +76,15 @@ async def survey_post(request: Request):
             "otros_juegos": (form.get("otros_juegos") or "").strip(),
         },
     }
-    
+
+    # Guardar Likert (item_1 ... item_N)
+    for idx in range(1, len(LIKERT_ITEMS) + 1):
+        payload["likert"][f"item_{idx}"] = (form.get(f"item_{idx}") or "").strip()
+
+    # ===== Google Sheets (si están las variables) =====
     sheet_id = os.getenv("GSHEET_ID", "").strip()
+    tab = os.getenv("GSHEET_TAB", "Respuestas").strip()
+
     if sheet_id:
         row = [
             payload["timestamp"],
@@ -88,29 +95,27 @@ async def survey_post(request: Request):
 
         # Likert
         for idx in range(1, len(LIKERT_ITEMS) + 1):
-            row.append(str(payload["likert"].get(f"item_{idx}", "") or ""))
+            row.append(str(payload["likert"].get(f"item_{idx}", "")))
 
         # Abiertas
-        row.extend([
-            payload["abiertas"]["problemas"],
-            payload["abiertas"]["ventajas"],
-            payload["abiertas"]["otros_juegos"],
-        ])
-    try:
-        append_row(sheet_id, row, sheet_name="Respuestas")
-    except Exception as e:
-        print("Sheets append failed:", repr(e))
+        row.extend(
+            [
+                payload["abiertas"]["problemas"],
+                payload["abiertas"]["ventajas"],
+                payload["abiertas"]["otros_juegos"],
+            ]
+        )
 
-    # Guardar respuestas (modo prototipo local)
+        try:
+            append_row(sheet_id, row, sheet_name=tab)
+        except Exception as e:
+            # Importante: no caer la app si falla Sheets
+            print("Sheets append failed:", repr(e))
+
+    # ===== Guardar respuestas (modo prototipo / respaldo) =====
     data_dir = BASE_DIR / "data"
     data_dir.mkdir(exist_ok=True)
     out_file = data_dir / "respuestas.jsonl"
-    tab = os.getenv("GSHEET_TAB", "Respuestas")
-    append_row(sheet_id, row, sheet_name=tab)
-
-    # Guardar Likert (item_1 ... item_15)
-    for idx in range(1, len(LIKERT_ITEMS) + 1):
-        payload["likert"][f"item_{idx}"] = form.get(f"item_{idx}")
 
     with open(out_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -122,3 +127,17 @@ async def survey_post(request: Request):
 def thanks(request: Request):
     return templates.TemplateResponse("thanks.html", {"request": request})
 
+
+# Endpoint de debug para probar escritura en Sheets (úsalo y luego lo borras si quieres)
+@router.get("/debug/sheets")
+def debug_sheets():
+    sheet_id = os.getenv("GSHEET_ID", "").strip()
+    tab = os.getenv("GSHEET_TAB", "Respuestas").strip()
+    if not sheet_id:
+        return {"ok": False, "error": "Missing GSHEET_ID"}
+
+    try:
+        append_row(sheet_id, ["TEST", "ok"], sheet_name=tab)
+        return {"ok": True, "sheet_id": sheet_id, "tab": tab}
+    except Exception as e:
+        return {"ok": False, "error": repr(e), "sheet_id": sheet_id, "tab": tab}
