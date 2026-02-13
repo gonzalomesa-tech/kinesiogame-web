@@ -117,3 +117,6 @@ async def survey_post(request: Request):
 @router.get("/gracias", response_class=HTMLResponse)
 def thanks(request: Request):
     return templates.TemplateResponse("thanks.html", {"request": request})
+
+tab = os.getenv("GSHEET_TAB", "Respuestas")
+append_row(sheet_id, row, sheet_name=tab)
