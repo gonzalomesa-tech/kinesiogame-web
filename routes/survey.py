@@ -96,13 +96,17 @@ async def survey_post(request: Request):
             payload["abiertas"]["ventajas"],
             payload["abiertas"]["otros_juegos"],
         ])
-
+    try:
         append_row(sheet_id, row, sheet_name="Respuestas")
+    except Exception as e:
+        print("Sheets append failed:", repr(e))
 
     # Guardar respuestas (modo prototipo local)
     data_dir = BASE_DIR / "data"
     data_dir.mkdir(exist_ok=True)
     out_file = data_dir / "respuestas.jsonl"
+    tab = os.getenv("GSHEET_TAB", "Respuestas")
+    append_row(sheet_id, row, sheet_name=tab)
 
     # Guardar Likert (item_1 ... item_15)
     for idx in range(1, len(LIKERT_ITEMS) + 1):
@@ -118,5 +122,3 @@ async def survey_post(request: Request):
 def thanks(request: Request):
     return templates.TemplateResponse("thanks.html", {"request": request})
 
-tab = os.getenv("GSHEET_TAB", "Respuestas")
-append_row(sheet_id, row, sheet_name=tab)
