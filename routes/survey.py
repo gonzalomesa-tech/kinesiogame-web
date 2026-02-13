@@ -1,4 +1,6 @@
 import json
+import os
+from utils.sheets import append_row
 from datetime import datetime
 from pathlib import Path
 
@@ -74,6 +76,28 @@ async def survey_post(request: Request):
             "otros_juegos": (form.get("otros_juegos") or "").strip(),
         },
     }
+    
+    sheet_id = os.getenv("GSHEET_ID", "").strip()
+    if sheet_id:
+        row = [
+            payload["timestamp"],
+            payload["datos_generales"]["nombre"],
+            payload["datos_generales"]["correo"],
+            str(payload["datos_generales"]["edad"]),
+        ]
+
+        # Likert
+        for idx in range(1, len(LIKERT_ITEMS) + 1):
+            row.append(str(payload["likert"].get(f"item_{idx}", "") or ""))
+
+        # Abiertas
+        row.extend([
+            payload["abiertas"]["problemas"],
+            payload["abiertas"]["ventajas"],
+            payload["abiertas"]["otros_juegos"],
+        ])
+
+        append_row(sheet_id, row, sheet_name="Respuestas")
 
     # Guardar respuestas (modo prototipo local)
     data_dir = BASE_DIR / "data"
